@@ -1,0 +1,47 @@
+.toggle-button {
+    font-weight: bold;
+}
+
+.ellipsis {
+    color: grey;
+}
+
+.number {
+    color: forestgreen;
+}
+
+.keyword {
+    color: darkviolet;
+}
+
+.symbol {
+    color: inherit;
+}
+
+.symbol:before {
+    content: "'";
+}
+
+.string {
+    color: dodgerblue;
+}
+
+.boolean {
+    color: goldenrod;
+}
+
+.nil {
+    color: silver;
+}
+
+.function {
+    color: firebrick;
+}
+
+.regex {
+    color: darkgreen;
+}
+
+.object .key:after {
+    content: ":";
+}
