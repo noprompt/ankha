@@ -15,8 +15,8 @@
    (enlive/html [:script (browser-connected-repl-js)])))
 
 (defroutes site
-  (resources "/")
-  (GET "/*" req (page)))
+  (GET "/" req (page))
+  (resources "/"))
 
 (def server nil)
 
