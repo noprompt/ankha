@@ -12,7 +12,7 @@ Require `ankha.core` somewhere in your project.
             [ankha.core :as ankha]))
 ```
 
-Next mount the `ankha/inspector` component somewhere.
+Next mount the `ankha/inspector` component with some data.
 
 ```clojure
 (om/root
@@ -30,21 +30,25 @@ Refresh your browser to so see something similar to the following.
 -{
 	:points -[
 				-{
-					:x1
-					:y0
+					:x 1
+					:y 0
 				}
 				-{
-					:x0
-					:y1
+					:x 0
+					:y 1
 				}
 				-{
-					:x-1
-					:y0
+					:x -1
+					:y 0
 				}
 				-{
-					:x0
-					:y-1
+					:x 0
+					:y -1
 				}
 			]
 }
 ```
+
+The `ankha/inspector` is compatible with all Clojure data structures
+including record types, JavaScript objects and arrays, and all
+primitive types such as strings, numbers, and so forth.
