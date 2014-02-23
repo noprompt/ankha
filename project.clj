@@ -16,14 +16,18 @@
              :build {:source-paths ["src"]}}
   :aliases {"auto-build" ["with-profile" "build" "do"
                           "cljsbuild" "clean,"
-                          "cljsbuild" "auto" "dev"]}
+                          "cljsbuild" "auto" "dev"]
+            "build-example" ["with-profile" "build" "do"
+                             "cljsbuild" "clean,"
+                             "cljsbuild" "once" "a"]}
   :cljsbuild {:builds [{:id "dev"
                         :source-paths ["src" "dev/brepl"]
                         :compiler {:preamble ["react/react.min.js"]
                                    :output-to "resources/public/js/ankha.js"
                                    :output-dir "resources/public/js/out"
                                    :source-map "resources/public/js/ankha.js.map"
-                                   :optimizations :whitespace}}{:id "a"
+                                   :optimizations :whitespace}}
+                       {:id "a"
                         :source-paths ["src" "examples/a/src"]
                         :compiler {:preamble ["react/react.min.js"]
                                    :output-to "examples/a/ankha.js"

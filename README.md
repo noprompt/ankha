@@ -52,3 +52,14 @@ Refresh your browser to so see something similar to the following.
 The `ankha/inspector` is compatible with all Clojure data structures
 including record types, JavaScript objects and arrays, and all
 primitive types such as strings, numbers, and so forth.
+
+## Example
+
+To see an example with more data, clone the repository for this
+project and from it's root run
+
+```
+$ lein build-example
+```
+
+then open `examples/a/index.html`.
