@@ -63,3 +63,9 @@ $ lein build-example
 ```
 
 then open `examples/a/index.html`.
+
+## Styling with CSS
+
+By default `ankha` only adds a minimum amount of styling to the
+output. You can use the stylesheet in `examples/a/ankha.css` for a
+better experience.
