@@ -10,10 +10,10 @@ Add `ankha` as a dependency to your `project.clj` file.
 [ankha "0.1.2"]
 ```
 
-Require `ankha.core` somewhere in your project. 
+Require `ankha.core` somewhere in your project.
 
 ```clojure
-(ns example 
+(ns example
   (:require [om.core :as om :include-macros true]
             [ankha.core :as ankha]))
 ```
