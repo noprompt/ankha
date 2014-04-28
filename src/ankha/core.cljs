@@ -7,7 +7,7 @@
 
 (enable-console-print!)
 
-;;======================================================================
+;; ---------------------------------------------------------------------
 ;; Utilities
 
 (defn- empty? [x]
@@ -24,7 +24,7 @@
 (defn- record-name [r]
   (first (string/split (pr-str r) "{")))
 
-;;======================================================================
+;; ---------------------------------------------------------------------
 ;; View helpers
 
 (declare view)
@@ -36,7 +36,7 @@
 
 (defn- collection [cursor coll class opener closer]
   (om/build view
-            (om/graft {:value coll} cursor)
+            {:value coll}
             {:opts {:opener opener
                     :class class
                     :closer closer}}))
@@ -54,7 +54,7 @@
   (defn function-name [f]
     (first (string/split (pr-str f) "{"))))
 
-(defn- inspect [cursor x]
+(defn- inspect [data x]
   (cond
    (number? x)  (literal "number" x)
    (keyword? x) (literal "keyword" x)
@@ -65,13 +65,13 @@
    (nil? x)     (literal "nil" x)
    (fn? x)      (literal "function" x)
    (regex? x)   (literal "regex" x)
-   (record? x)  (collection cursor x "record" (str (record-name x) "{") "}")
-   (map? x)     (collection cursor x "map" "{" "}")
-   (vector? x)  (collection cursor x "vector" "[" "]")
-   (set? x)     (collection cursor x "set" "#{" "}")
-   (seq? x)     (collection cursor x "seq " "(" ")")
-   (object? x)  (collection cursor x "object" "#js {" "}")
-   (array? x)   (collection cursor x "array" "#js [" "]")
+   (record? x)  (collection data x "record" (str (record-name x) "{") "}")
+   (map? x)     (collection data x "map" "{" "}")
+   (vector? x)  (collection data x "vector" "[" "]")
+   (set? x)     (collection data x "set" "#{" "}")
+   (seq? x)     (collection data x "seq " "(" ")")
+   (object? x)  (collection data x "object" "#js {" "}")
+   (array? x)   (collection data x "array" "#js [" "]")
    :else        (literal "literal" x)))
 
 (defn- associative->dom
