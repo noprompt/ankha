@@ -7,7 +7,7 @@ A generic data inspection component.
 Add `ankha` as a dependency to your `project.clj` file.
 
 ```clojure
-[ankha "0.1.1"]
+[ankha "0.1.2"]
 ```
 
 Require `ankha.core` somewhere in your project. 
