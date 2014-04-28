@@ -1,4 +1,4 @@
-(defproject ankha "0.1.2"
+(defproject ankha "0.1.3-SNAPSHOT"
   :description "A generic data inspection component for use with Om."
   :url "https://github.com/noprompt/ankha"
   :license {:name "Eclipse Public License"
