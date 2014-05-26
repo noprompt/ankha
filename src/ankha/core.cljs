@@ -8,38 +8,33 @@
 (enable-console-print!)
 
 ;; ---------------------------------------------------------------------
+;; View helpers
+
+(defprotocol IInspect
+  (-inspect [this]))
+
+;; ---------------------------------------------------------------------
 ;; Utilities
 
 (defn- empty? [x]
-  (cond
-   (object? x) (object/isEmpty x)
-   :else (clojure.core/empty? x)))
+  (if (object? x)
+    (object/isEmpty x)
+    (clojure.core/empty? x)))
 
 (defn- record? [x]
   (satisfies? IRecord x))
 
-(defn- regex? [x]
-  (instance? js/RegExp x))
+(defn record-name [r]
+  (let [s (pr-str r)]
+    (subs s 0 (.indexOf s "{"))))
 
-(defn- record-name [r]
-  (first (string/split (pr-str r) "{")))
+(defn record-opener [r]
+  (str (record-name r) "{"))
 
 ;; ---------------------------------------------------------------------
 ;; View helpers
 
 (declare view)
-
-(defn- literal [class x]
-  (dom/span #js {:className class
-                 :key x}
-            (pr-str x)))
-
-(defn- collection [cursor coll class opener closer]
-  (om/build view
-            {:value coll}
-            {:opts {:opener opener
-                    :class class
-                    :closer closer}}))
 
 ;; TODO: Build a view for functions. 
 
@@ -54,68 +49,54 @@
   (defn function-name [f]
     (first (string/split (pr-str f) "{"))))
 
-(defn- inspect [data x]
+(defn- literal [class x]
+  (dom/span #js {:className class :key x}
+    (pr-str x)))
+
+(defn coll-view [data opener closer class]
+  (om/build view data
+    {:opts {:opener opener :closer closer :class class}}))
+
+(defn inspect* [x]
   (cond
-   (number? x)  (literal "number" x)
-   (keyword? x) (literal "keyword" x)
-   (symbol? x)  (literal "symbol" x)
-   (string? x)  (literal "string" x)
-   (true? x)    (literal "boolean" x)
-   (false? x)   (literal "boolean" x)
-   (nil? x)     (literal "nil" x)
-   (fn? x)      (literal "function" x)
-   (regex? x)   (literal "regex" x)
-   (record? x)  (collection data x "record" (str (record-name x) "{") "}")
-   (map? x)     (collection data x "map" "{" "}")
-   (vector? x)  (collection data x "vector" "[" "]")
-   (set? x)     (collection data x "set" "#{" "}")
-   (seq? x)     (collection data x "seq " "(" ")")
-   (object? x)  (collection data x "object" "#js {" "}")
-   (array? x)   (collection data x "array" "#js [" "]")
-   :else        (literal "literal" x)))
+    (satisfies? IInspect x)
+    (-inspect x)
+    (fn? x)
+    (literal "function" x)
+    :else
+    (literal "literal" x)))
 
 (defn- associative->dom
-  [data kvs {:keys [entry-class key-class val-class]}]
+  [data {:keys [entry-class key-class val-class]}]
   (into-array
-   (for [[k v] kvs]
-     (dom/li nil
-             (dom/div #js {:className (str "entry "  entry-class)
-                           :style #js {:position "relative"}}
-                      (dom/span #js {:className (str "key " key-class) 
-                                     :style #js {:display "inline-block"
-                                                 :verticalAlign "top"}}
-                                (inspect data (om/value k)))
-                      (dom/span #js {:style #js {:display "inline-block"
-                                                 :width "1em"}})
-                      (dom/span #js {:className (str "val " val-class)
-                                     :style #js {:display "inline-block"
-                                                 :verticalAlign "top"}}
-                                (inspect data (om/value v))))))))
+    (for [[k v] data]
+      (dom/li #js {:key (str [k v])}
+        (dom/div #js {:className (str "entry " entry-class)
+                      :style #js {:position "relative"}}
+          (dom/span #js {:className (str "key " key-class) 
+                         :style #js {:display "inline-block"
+                                     :verticalAlign "top"}}
+            (inspect* k))
+          (dom/span #js {:style #js {:display "inline-block"
+                                     :width "1em"}})
+          (dom/span #js {:className (str "val " val-class)
+                         :style #js {:display "inline-block"
+                                     :verticalAlign "top"}}
+            (inspect* v)))))))
 
-(defn- map->dom [data m]
-  (associative->dom data m {:entry-class "map-entry"
-                            :key-class "map-key"
-                            :val-class "map-val"}))
-
-(defn- object->dom [data o]
-  (as-> (zipmap (object/getKeys o) (object/getValues o)) _
-        (associative->dom data _ {:entry-class "object-entry"
-                                  :key-class "object-key"
-                                  :val-class "object-val"})))
-
-(defn- coll->dom [data v]
+(defn- sequential->dom [data]
   (into-array
-   (for [x v]
-     (dom/li #js {:className "entry"}
-             (inspect data (om/value x))))))
+    (for [[i x :as pair] (map-indexed vector data)]
+      (dom/li #js {:className "entry"
+                   :key (str pair)}
+        (inspect* x)))))
 
 (defn- toggle-button [owner {:keys [disable?]}]
   (dom/button #js {:className "toggle-button"
                    :disabled disable?
-                   :onClick (fn [_]
-                              (->> (om/get-state owner :open?)
-                                   (not)
-                                   (om/set-state! owner :open?)))
+                   :onClick
+                   (fn [_]
+                     (om/update-state! owner :open? not))
                    :style #js {:display "inline-block"
                                :verticalAlign "top"
                                :border "none"
@@ -124,69 +105,137 @@
                                :outline "none"
                                :fontWeight "bold"
                                :padding "0"
-                               :opacity (if disable?
-                                          "0.5"
-                                          "1.0")}}
-              (if (om/get-state owner :open?)
-                "-"
-                "+")))
+                               :opacity (if disable? "0.5" "1.0")}}
+    (if (om/get-state owner :open?) "-" "+")))
 
 (defn- view [data owner {:keys [class opener closer] :as opts}]
-  (let [value (:value data)
-        value? (empty? value)
-        open? #(om/get-state owner :open?)]
-    (reify
-      om/IInitState
-      (init-state [_]
-        {:open? (and (not (false? (:open? opts)))
-                     (not value?))})
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:vacant? (empty? data)
+       :open? (and (not (false? (:open? opts)))
+                   (not (empty? data)))})
 
-      om/IRender
-      (render [_]
-        (dom/div #js {:className class}
-                 (toggle-button owner {:disable? value?})
-                 
-                 (dom/span #js {:className "opener"
-                                :style #js {:display "inline-block"}}
-                           opener)
+    om/IRenderState
+    (render-state [_ {:keys [open? vacant?]}]
+      (dom/div #js {:className class}
+        (toggle-button owner {:disable? vacant?})
+        
+        (dom/span #js {:className "opener"
+                       :style #js {:display "inline-block"}}
+          opener)
 
-                 (dom/ul #js {:className "values"
-                              :style #js {:display (if (open?)
-                                                     "block"
-                                                     "none")
-                                          :listStyleType "none"
-                                          :margin "0"}}
-                         (let [f (cond
-                                  (map? value) map->dom
-                                  (object? value) object->dom
-                                  :else coll->dom)]
-                           (f data value)))
+        (dom/ul #js {:className "values"
+                     :style #js {:display (if open? "block" "none")
+                                 :listStyleType "none"
+                                 :margin "0"}}
+          (cond
+            (map? data)
+            (associative->dom data {:entry-class "map-entry"
+                                    :key-class "map-key"
+                                    :val-class "map-val"})
+            (object? data)
+            (let [m (zipmap (goog.object/getKeys data)
+                            (goog.object/getValues data))]
+              (associative->dom m {:entry-class "object-entry"
+                                   :key-class "object-key"
+                                   :val-class "object-val"}))
+            :else
+            (sequential->dom data)))
 
-                 (dom/span #js {:className "ellipsis"
-                                :style #js {:display (cond
-                                                      (open?) "none"
-                                                      value? "none"
-                                                      :else "inline")}}
-                           "…")
+        (dom/span #js {:className "ellipsis"
+                       :style #js {:display (if (or open? vacant?)
+                                              "none"
+                                              "inline")}}
+          "…")
 
-                 (dom/span #js {:className "closer"
-                                :style #js {:display (cond
-                                                      (not value?) "inline-block"
-                                                      (open?) "block"
-                                                      :else "inline-block")}}
-                           closer))))))
+        (dom/span #js {:className "closer"
+                       :style #js {:display (if open?
+                                              "block"
+                                              "inline-block")}}
+          closer)))))
 
 (defn inspector
   ([data owner]
      (inspector data owner {:opts {:class "inspector"}}))
-  ([data owner opts]
-     (let [{:keys [class] :or {class "inspector"}} opts]
-       (reify
-         om/IRender
-         (render [_]
-           (dom/div #js {:className "inspector"
-                         :style #js {:fontFamily "monospace"
-                                     :whiteSpace "pre-wrap"
-                                     :width "100%"
-                                     :overflowX "scroll"}}
-                    (inspect data (om/value data))))))))
+  ([data owner {:keys [class] :or {class "inspector"} :as opts}]
+     (reify
+       om/IRender
+       (render [_]
+         (dom/div #js {:className "inspector"
+                       :style #js {:fontFamily "monospace"
+                                   :whiteSpace "pre-wrap"
+                                   :width "100%"
+                                   :overflowX "scroll"}}
+           (inspect* data))))))
+
+;; ---------------------------------------------------------------------
+;; IInspect Implementation
+
+(extend-protocol IInspect
+  Keyword
+  (-inspect [this] (literal "keyword" this))
+
+  Symbol
+  (-inspect [this] (literal "symbol" this))
+
+  PersistentVector
+  (-inspect [this] (coll-view this "[" "]" "vector"))
+
+  PersistentHashSet
+  (-inspect [this] (coll-view this "#{" "}" "set"))
+
+  PersistentTreeSet
+  (-inspect [this] (coll-view this "#{" "}" "set"))
+
+  List
+  (-inspect [this] (coll-view this "(" ")" "list"))
+
+  LazySeq
+  (-inspect [this] (coll-view this "(" ")" "lazy-seq"))
+
+  KeySeq
+  (-inspect [this] (coll-view this "(" ")" "val-seq"))
+
+  ValSeq
+  (-inspect [this] (coll-view this "(" ")" "key-seq"))
+
+  PersistentArrayMapSeq
+  (-inspect [this] (coll-view this "(" ")" "map-seq"))
+
+  Range
+  (-inspect [this] (coll-view this "(" ")" "range"))
+
+  om/IndexedCursor
+  (-inspect [this]
+    (coll-view this "[" "]" "vector"))
+
+  om/MapCursor
+  (-inspect [this]
+    (if (record? (om/value this))
+      (coll-view this (record-opener this) "}" "record")
+      (coll-view this "{" "}" "map")))
+
+  js/RegExp
+  (-inspect [this] (literal "regexp" this))
+
+  function
+  (-inspect [this] (literal "function" this)) 
+
+  number
+  (-inspect [this] (literal "number" this))
+
+  string
+  (-inspect [this] (literal "string" this))
+
+  boolean
+  (-inspect [this] (literal "boolean" this))
+
+  array
+  (-inspect [this] (coll-view this "#js [" "]" "array"))
+
+  object
+  (-inspect [this] (coll-view this "#js {" "}" "object"))
+
+  nil
+  (-inspect [this] (literal "nil" this)))
