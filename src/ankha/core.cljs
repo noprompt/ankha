@@ -3,51 +3,48 @@
   (:require [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [clojure.string :as string]
-            [goog.object :as object]))
+            [goog.object :as object]
+            [brepl.connect]))
 
 (enable-console-print!)
 
 ;; ---------------------------------------------------------------------
-;; View helpers
+;; Protocols
 
 (defprotocol IInspect
-  (-inspect [this]))
+  (-inspect [this]
+    "Return a React or Om compatible representation of this."))
 
 ;; ---------------------------------------------------------------------
 ;; Utilities
 
-(defn- empty? [x]
+(defn- empty?
+  "Return true if x is an empty js/Object or empty Clojure collection."
+  [x]
   (if (object? x)
     (object/isEmpty x)
     (clojure.core/empty? x)))
 
-(defn- record? [x]
+(defn- record?
+  "Return true if x satisfies IRecord, false otherwise."
+  [x]
   (satisfies? IRecord x))
 
-(defn record-name [r]
+(defn record-name
+  "Return the name of a Record type."
+  [r]
   (let [s (pr-str r)]
     (subs s 0 (.indexOf s "{"))))
 
-(defn record-opener [r]
+(defn record-opener
+  "Return an opener for a Record type."
+  [r]
   (str (record-name r) "{"))
 
 ;; ---------------------------------------------------------------------
 ;; View helpers
 
 (declare view)
-
-;; TODO: Build a view for functions. 
-
-(comment
-  (def fn-re
-    #"(\#<function.*?\([\s\S]*?\) *\{)([\s\S]*?)(\}>)")
-
-  (defn function [cursor f]
-    (let [s (pr-str f)
-          [_ opener fn-body closer] (re-matches fn-re s)]))
-
-  (defn function-name [f]
-    (first (string/split (pr-str f) "{"))))
 
 (defn- literal [class x]
   (dom/span #js {:className class :key x}
@@ -108,6 +105,9 @@
                                :opacity (if disable? "0.5" "1.0")}}
     (if (om/get-state owner :open?) "-" "+")))
 
+;; ---------------------------------------------------------------------
+;; Main component
+
 (defn- view [data owner {:keys [class opener closer] :as opts}]
   (reify
     om/IInitState
@@ -135,8 +135,10 @@
                                     :key-class "map-key"
                                     :val-class "map-val"})
             (object? data)
-            (let [m (zipmap (goog.object/getKeys data)
-                            (goog.object/getValues data))]
+            (let [;; Avoid zipmap to preserve key order.
+                  ks (object/getKeys data)
+                  vs (object/getValues data)
+                  m (map vector ks vs)]
               (associative->dom m {:entry-class "object-entry"
                                    :key-class "object-key"
                                    :val-class "object-val"}))
@@ -162,7 +164,7 @@
      (reify
        om/IRender
        (render [_]
-         (dom/div #js {:className "inspector"
+         (dom/div #js {:className class
                        :style #js {:fontFamily "monospace"
                                    :whiteSpace "pre-wrap"
                                    :width "100%"
@@ -183,38 +185,38 @@
   (-inspect [this] (coll-view this "[" "]" "vector"))
 
   PersistentHashSet
-  (-inspect [this] (coll-view this "#{" "}" "set"))
+  (-inspect [this] (coll-view this "#{" "}" "set persistent-hash-set"))
 
   PersistentTreeSet
-  (-inspect [this] (coll-view this "#{" "}" "set"))
+  (-inspect [this] (coll-view this "#{" "}" "set persistent-tree-set"))
 
   List
   (-inspect [this] (coll-view this "(" ")" "list"))
 
   LazySeq
-  (-inspect [this] (coll-view this "(" ")" "lazy-seq"))
+  (-inspect [this] (coll-view this "(" ")" "seq lazy-seq"))
 
   KeySeq
-  (-inspect [this] (coll-view this "(" ")" "val-seq"))
+  (-inspect [this] (coll-view this "(" ")" "seq key-seq"))
 
   ValSeq
-  (-inspect [this] (coll-view this "(" ")" "key-seq"))
+  (-inspect [this] (coll-view this "(" ")" "seq val-seq"))
 
   PersistentArrayMapSeq
-  (-inspect [this] (coll-view this "(" ")" "map-seq"))
+  (-inspect [this] (coll-view this "(" ")" "seq persistent-array-map-seq"))
 
   Range
-  (-inspect [this] (coll-view this "(" ")" "range"))
+  (-inspect [this] (coll-view this "(" ")" "seq range"))
 
   om/IndexedCursor
   (-inspect [this]
-    (coll-view this "[" "]" "vector"))
+    (coll-view this "[" "]" "vector indexed-cursor"))
 
   om/MapCursor
   (-inspect [this]
     (if (record? (om/value this))
-      (coll-view this (record-opener this) "}" "record")
-      (coll-view this "{" "}" "map")))
+      (coll-view this (record-opener this) "}" "record map-cursor")
+      (coll-view this "{" "}" "map map-cursor")))
 
   js/RegExp
   (-inspect [this] (literal "regexp" this))
