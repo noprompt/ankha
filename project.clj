@@ -5,7 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies
   [[org.clojure/clojure "1.5.1"]
-   [org.clojure/clojurescript "0.0-2202" :scope "provided"]
+   [org.clojure/clojurescript "0.0-2227" :scope "provided"]
    [om "0.6.2" :scope "provided"]]
 
   :plugins
@@ -17,8 +17,10 @@
   {:dev {:source-paths ["src" "dev"]
          :dependencies [[compojure "1.1.6"]
                         [ring "1.2.1"]
-                        [enlive "1.1.5"]]
-         :plugins [[com.cemerick/austin "0.1.3"]]}
+                        [enlive "1.1.5"]
+                        [figwheel "0.1.3-SNAPSHOT"]]
+         :plugins [[com.cemerick/austin "0.1.3"]
+                   [lein-figwheel "0.1.3-SNAPSHOT"]]}
    :build {:source-paths ["src"]}}
 
   :aliases
@@ -32,11 +34,10 @@
   :cljsbuild
   {:builds [{:id "dev"
              :source-paths ["src" "dev/brepl"]
-             :compiler {:preamble ["react/react.min.js"]
-                        :output-to "resources/public/js/ankha.js"
+             :compiler {:output-to "resources/public/js/ankha.js"
                         :output-dir "resources/public/js/out"
                         :source-map "resources/public/js/ankha.js.map"
-                        :optimizations :whitespace}}
+                        :optimizations :none}}
             {:id "a"
              :source-paths ["src" "examples/a/src"]
              :compiler {:preamble ["react/react.min.js"]
