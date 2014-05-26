@@ -3,8 +3,7 @@
   (:require [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [clojure.string :as string]
-            [goog.object :as object]
-            [brepl.connect]))
+            [goog.object :as object]))
 
 (enable-console-print!)
 
@@ -88,6 +87,23 @@
                    :key (str pair)}
         (inspect* x)))))
 
+(defn- coll->dom [data]
+  (cond
+   (map? data)
+   (associative->dom data {:entry-class "map-entry"
+                           :key-class "map-key"
+                           :val-class "map-val"})
+   (object? data)
+   (let [;; Avoid zipmap to preserve key order.
+         ks (object/getKeys data)
+         vs (object/getValues data)
+         m (map vector ks vs)]
+     (associative->dom m {:entry-class "object-entry"
+                          :key-class "object-key"
+                          :val-class "object-val"}))
+   :else
+   (sequential->dom data)))
+
 (defn- toggle-button [owner {:keys [disable?]}]
   (dom/button #js {:className "toggle-button"
                    :disabled disable?
@@ -129,21 +145,7 @@
                      :style #js {:display (if open? "block" "none")
                                  :listStyleType "none"
                                  :margin "0"}}
-          (cond
-            (map? data)
-            (associative->dom data {:entry-class "map-entry"
-                                    :key-class "map-key"
-                                    :val-class "map-val"})
-            (object? data)
-            (let [;; Avoid zipmap to preserve key order.
-                  ks (object/getKeys data)
-                  vs (object/getValues data)
-                  m (map vector ks vs)]
-              (associative->dom m {:entry-class "object-entry"
-                                   :key-class "object-key"
-                                   :val-class "object-val"}))
-            :else
-            (sequential->dom data)))
+          (coll->dom data))
 
         (dom/span #js {:className "ellipsis"
                        :style #js {:display (if (or open? vacant?)
