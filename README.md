@@ -2,6 +2,13 @@
 
 A generic data inspection component.
 
+## Contents
+
+* [Usage](#usage)
+* [Example](#example)
+* [Styling with CSS](#styling-with-css)
+* [Extending the Inspector](#extending-the-inspector)
+
 ## Usage
 
 Add `ankha` as a dependency to your `project.clj` file.
@@ -76,7 +83,7 @@ By default `ankha` only adds a minimum amount of styling to the
 output. You can use the stylesheet in `examples/a/ankha.css` for a
 better experience.
 
-## Extending the inspector
+## Extending the Inspector
 
 Ankha provides inspection for all Clojure data types (including
 records), and JavaScript Arrays and Objects. You may want to provide
