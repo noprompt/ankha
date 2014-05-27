@@ -1,9 +1,10 @@
 (ns ankha.core
   (:refer-clojure :exclude [empty? inspect])
-  (:require [om.core :as om :include-macros true]
-            [om.dom :as dom :include-macros true]
-            [clojure.string :as string]
-            [goog.object :as object]))
+  (:require
+   [om.core :as om :include-macros true]
+   [om.dom :as dom :include-macros true]
+   [clojure.string :as string]
+   [goog.object :as object]))
 
 (enable-console-print!)
 
@@ -43,17 +44,17 @@
 ;; ---------------------------------------------------------------------
 ;; View helpers
 
-(declare view)
+(declare collection-view)
 
-(defn- literal [class x]
+(defn literal [class x]
   (dom/span #js {:className class :key x}
     (pr-str x)))
 
 (defn coll-view [data opener closer class]
-  (om/build view data
+  (om/build collection-view data
     {:opts {:opener opener :closer closer :class class}}))
 
-(defn inspect* [x]
+(defn inspect [x]
   (cond
     (satisfies? IInspect x)
     (-inspect x)
@@ -62,7 +63,7 @@
     :else
     (literal "literal" x)))
 
-(defn- associative->dom
+(defn associative->dom
   [data {:keys [entry-class key-class val-class]}]
   (into-array
     (for [[k v] data]
@@ -72,22 +73,22 @@
           (dom/span #js {:className (str "key " key-class) 
                          :style #js {:display "inline-block"
                                      :verticalAlign "top"}}
-            (inspect* k))
+            (inspect k))
           (dom/span #js {:style #js {:display "inline-block"
                                      :width "1em"}})
           (dom/span #js {:className (str "val " val-class)
                          :style #js {:display "inline-block"
                                      :verticalAlign "top"}}
-            (inspect* v)))))))
+            (inspect v)))))))
 
-(defn- sequential->dom [data]
+(defn sequential->dom [data]
   (into-array
     (for [[i x :as pair] (map-indexed vector data)]
       (dom/li #js {:className "entry"
                    :key (str pair)}
-        (inspect* x)))))
+        (inspect x)))))
 
-(defn- coll->dom [data]
+(defn coll->dom [data]
   (cond
    (map? data)
    (associative->dom data {:entry-class "map-entry"
@@ -124,7 +125,8 @@
 ;; ---------------------------------------------------------------------
 ;; Main component
 
-(defn- view [data owner {:keys [class opener closer] :as opts}]
+(defn collection-view
+  [data owner {:keys [class opener closer] :as opts}]
   (reify
     om/IInitState
     (init-state [_]
@@ -171,7 +173,7 @@
                                    :whiteSpace "pre-wrap"
                                    :width "100%"
                                    :overflowX "scroll"}}
-           (inspect* data))))))
+           (inspect data))))))
 
 ;; ---------------------------------------------------------------------
 ;; IInspect Implementation
@@ -182,6 +184,14 @@
 
   Symbol
   (-inspect [this] (literal "symbol" this))
+
+  PersistentArrayMap
+  (-inspect [this]
+    (coll-view this "{" "}" "map persistent-array-map"))
+
+  PersistentHashMap
+  (-inspect [this]
+    (coll-view this "{" "}" "map persistent-array-map"))
 
   PersistentVector
   (-inspect [this] (coll-view this "[" "]" "vector"))
