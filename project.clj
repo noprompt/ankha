@@ -1,15 +1,13 @@
-(defproject ankha "0.1.3-SNAPSHOT"
+(defproject ankha "0.1.3"
   :description "A generic data inspection component for use with Om."
   :url "https://github.com/noprompt/ankha"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
+
   :dependencies
   [[org.clojure/clojure "1.5.1"]
    [org.clojure/clojurescript "0.0-2227" :scope "provided"]
    [om "0.6.2" :scope "provided"]]
-
-  :plugins
-  [[lein-cljsbuild "1.0.3"]]
 
   :source-paths ["src"]
 
@@ -20,7 +18,8 @@
                         [enlive "1.1.5"]
                         [figwheel "0.1.3-SNAPSHOT"]]
          :plugins [[com.cemerick/austin "0.1.3"]
-                   [lein-figwheel "0.1.3-SNAPSHOT"]]}
+                   [lein-figwheel "0.1.3-SNAPSHOT"]
+                   [lein-cljsbuild "1.0.3"]]}
    :build {:source-paths ["src"]}}
 
   :aliases

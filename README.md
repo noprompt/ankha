@@ -7,7 +7,7 @@ A generic data inspection component.
 Add `ankha` as a dependency to your `project.clj` file.
 
 ```clojure
-[ankha "0.1.2"]
+[ankha "0.1.3"]
 ```
 
 Require `ankha.core` somewhere in your project.
@@ -76,7 +76,28 @@ By default `ankha` only adds a minimum amount of styling to the
 output. You can use the stylesheet in `examples/a/ankha.css` for a
 better experience.
 
+## Extending the inspector
+
+Ankha provides inspection for all Clojure data types (including
+records), JavaScript Arrays and Objects. You may want to provide
+special handling for your own custom data type or even override
+Ankha's existing implementations. To do this simply implement Ankha's
+`IInspect` protocol.
+
+```clj
+(extend-protocol ankha/IInspect
+  User
+  (-inspect [this]
+    (dom/span #js {:className "record user"}
+	  (dom/span nil "First name: " (:first-name this))
+	  " "
+	  (dom/span nil "Last name: " (:last-name this)))))
+```
+
+Your implementation must return a value capable of being rendered by
+React or Om.
+
 ## Support
 
-Right now only known to work with recent versions of Om (>= 0.5)
-and ClojureScript (>= 0.0-2156).
+Right now only known to work with recent versions of Om `(>= 0.5)`
+and ClojureScript `(>= 0.0-2156)`.
