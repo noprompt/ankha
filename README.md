@@ -79,10 +79,10 @@ better experience.
 ## Extending the inspector
 
 Ankha provides inspection for all Clojure data types (including
-records), JavaScript Arrays and Objects. You may want to provide
-special handling for your own custom data type or even override
-Ankha's existing implementations. To do this simply implement Ankha's
-`IInspect` protocol.
+records), and JavaScript Arrays and Objects. You may want to provide
+special handling for your own custom data type, override Ankha's
+existing implementations, or even types you don't control. To do this
+simply implement Ankha's `IInspect` protocol.
 
 ```clj
 (extend-protocol ankha/IInspect
