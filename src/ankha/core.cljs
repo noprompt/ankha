@@ -191,7 +191,7 @@
 
   PersistentHashMap
   (-inspect [this]
-    (coll-view this "{" "}" "map persistent-array-map"))
+    (coll-view this "{" "}" "map persistent-hash-map"))
 
   PersistentVector
   (-inspect [this] (coll-view this "[" "]" "vector"))
