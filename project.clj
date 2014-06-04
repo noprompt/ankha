@@ -13,26 +13,23 @@
 
   :profiles
   {:dev {:source-paths ["src" "dev"]
-         :dependencies [[compojure "1.1.6"]
-                        [ring "1.2.1"]
-                        [enlive "1.1.5"]
+         :dependencies [[weasel "0.2.0"]
+                        [com.cemerick/piggieback "0.1.3"]
                         [figwheel "0.1.3-SNAPSHOT"]]
          :plugins [[com.cemerick/austin "0.1.3"]
                    [lein-figwheel "0.1.3-SNAPSHOT"]
-                   [lein-cljsbuild "1.0.3"]]}
+                   [lein-cljsbuild "1.0.3"]]
+         :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}
    :build {:source-paths ["src"]}}
 
   :aliases
-  {"auto-build" ["with-profile" "build" "do"
-                 "cljsbuild" "clean,"
-                 "cljsbuild" "auto" "dev"]
-   "build-example" ["with-profile" "build" "do"
+  {"build-example" ["with-profile" "build" "do"
                     "cljsbuild" "clean,"
                     "cljsbuild" "once" "a"]}
 
   :cljsbuild
   {:builds [{:id "dev"
-             :source-paths ["src" "dev/brepl"]
+             :source-paths ["src" "dev/amulet"]
              :compiler {:output-to "resources/public/js/ankha.js"
                         :output-dir "resources/public/js/out"
                         :source-map "resources/public/js/ankha.js.map"
