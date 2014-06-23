@@ -42,6 +42,10 @@
     color: darkgreen;
 }
 
+.error {
+    color: red;
+}
+
 .object .key:after {
     content: ":";
 }
