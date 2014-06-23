@@ -188,7 +188,10 @@
 
     om/IRenderState
     (render-state [_ {:keys [open? vacant? editing? edited-data editing-error-message open-editor save-editor cancel-editor]}]
-      (dom/div #js {:className class}
+      (dom/div #js {:className class
+                    :onDoubleClick (fn [e]
+                                     (.stopPropagation e)
+                                     (open-editor))}
         (toggle-button owner {:disable? vacant?})
 
         (when open?
