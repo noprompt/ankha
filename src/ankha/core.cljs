@@ -144,20 +144,20 @@
 
 (defn- editor [owner {:keys [value save-editor cancel-editor error-message]}]
   (dom/div #js {:style #js {:display "inline"}}
-                   (dom/textarea #js {:className "editor"
-                                      :style #js {:display "inline-block"}
-                                      :value value
-                                      :onKeyPress (fn [e]
-                                                    (when (= 13 (.-keyCode e))
-                                                      (.preventDefault e)))
-                                      :onKeyUp (fn [e]
-                                                    (case (.-keyCode e)
-                                                      13 (save-editor)
-                                                      27 (cancel-editor)
-                                                      nil))
-                                      :onChange (fn [e] (om/set-state! owner :edited-data (.. e -target -value)))})
-                   (when error-message (dom/span #js {:className "error" :style #js {:vertical-align "top"}}
-                                                         error-message))))
+           (dom/textarea #js {:className "editor"
+                              :style #js {:display "inline-block"}
+                              :value value
+                              :onKeyPress (fn [e]
+                                            (when (= 13 (.-keyCode e))
+                                              (.preventDefault e)))
+                              :onKeyUp (fn [e]
+                                         (case (.-keyCode e)
+                                           13 (save-editor)
+                                           27 (cancel-editor)
+                                           nil))
+                              :onChange (fn [e] (om/set-state! owner :edited-data (.. e -target -value)))})
+           (when error-message (dom/span #js {:className "error" :style #js {:vertical-align "top"}}
+                                         error-message))))
 
 ;; ---------------------------------------------------------------------
 ;; Main component
@@ -175,6 +175,7 @@
                         (let [new-data (reader/read-string (om/get-state owner :edited-data))]
                           ;; if the new data is the same as the old just stop editing
                           ;; if not, set data to new data, which will cause this component to re-mount
+                          ;; this is a little funky but seems necessary to avoid trying to update an unmounted component
                           (if (= new-data @data)
                             (om/set-state! owner :editing? false)
                             (om/update! data new-data)))
