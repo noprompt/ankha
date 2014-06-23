@@ -293,6 +293,9 @@
   js/RegExp
   (-inspect [this] (literal "regexp" this))
 
+  js/Date
+  (-inspect [this] (literal "date" this))
+
   function
   (-inspect [this] (literal "function" this))
 
