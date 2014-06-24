@@ -140,24 +140,32 @@
                                :fontWeight "bold"
                                :padding "0"
                                :opacity (if disable? "0.5" "1.0")}}
-              (if (om/get-state owner :editing?) "save" "edit")))
+              (if (om/get-state owner :editing?) "Save" "Edit")))
+
+(defn enter-key? [e]
+  (= 13 (.-keyCode e)))
+
+(defn escape-key? [e]
+  (= 27 (.-keyCode e)))
 
 (defn- editor [owner {:keys [value save-editor cancel-editor error-message]}]
   (dom/div #js {:style #js {:display "inline"}}
-           (dom/textarea #js {:className "editor"
+           (dom/textarea #js {:className "bacon"
+                              :ref "editor"
                               :style #js {:display "inline-block"}
                               :value value
                               :onKeyPress (fn [e]
-                                            (when (= 13 (.-keyCode e))
+                                            (when (enter-key? e)
                                               (.preventDefault e)))
                               :onKeyUp (fn [e]
-                                         (case (.-keyCode e)
-                                           13 (save-editor)
-                                           27 (cancel-editor)
-                                           nil))
-                              :onChange (fn [e] (om/set-state! owner :edited-data (.. e -target -value)))})
-           (when error-message (dom/span #js {:className "error" :style #js {:vertical-align "top"}}
-                                         error-message))))
+                                         (cond
+                                           (enter-key? e) (save-editor)
+                                           (escape-key? e) (cancel-editor)))
+                              :onChange (fn [e] (om/set-state! owner :edited-data (.. e -target -value)))
+                              :onBlur save-editor})
+           (when error-message
+             (dom/span #js {:className "error" :style #js {:vertical-align "top"}}
+                       error-message))))
 
 ;; ---------------------------------------------------------------------
 ;; Main component
@@ -223,7 +231,12 @@
                                                 "none"
                                                 "block")
                                               "inline-block")}}
-          closer)))))
+          closer)))
+
+    om/IDidUpdate
+    (did-update [this prev-props prev-state]
+      (when (om/get-state owner :editing?)
+        (.focus (om/get-node owner "editor"))))))
 
 (defn inspector
   ([data owner]

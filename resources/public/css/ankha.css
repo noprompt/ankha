@@ -53,3 +53,8 @@
 .object .key:after {
     content: ":";
 }
+
+textarea {
+    font-family: monospace;
+    font-size: 13px;
+}
