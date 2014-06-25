@@ -150,7 +150,7 @@
 
 (defn- editor [owner {:keys [value save-editor cancel-editor error-message]}]
   (dom/div #js {:style #js {:display "inline"}}
-           (dom/textarea #js {:className "bacon"
+           (dom/textarea #js {:className "editor"
                               :ref "editor"
                               :style #js {:display "inline-block"}
                               :value value
