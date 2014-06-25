@@ -4,6 +4,7 @@
    [om.core :as om :include-macros true]
    [om.dom :as dom :include-macros true]
    [clojure.string :as string]
+   [cljs.reader :as reader]
    [goog.object :as object]))
 
 (enable-console-print!)
@@ -70,7 +71,7 @@
       (dom/li #js {:key (str [k v])}
         (dom/div #js {:className (str "entry " entry-class)
                       :style #js {:position "relative"}}
-          (dom/span #js {:className (str "key " key-class) 
+          (dom/span #js {:className (str "key " key-class)
                          :style #js {:display "inline-block"
                                      :verticalAlign "top"}}
             (inspect k))
@@ -122,6 +123,50 @@
                                :opacity (if disable? "0.5" "1.0")}}
     (if (om/get-state owner :open?) "-" "+")))
 
+(defn- edit-button [owner {:keys [disable? save-editor open-editor]}]
+  (dom/button #js {:className "edit-button"
+                   :disabled disable?
+                   :onClick
+                   (fn [_]
+                     (if (om/get-state owner :editing?)
+                       (save-editor)
+                       (open-editor)))
+                   :style #js {:display "inline-block"
+                               :verticalAlign "top"
+                               :border "none"
+                               :background "none"
+                               :cursor "pointer"
+                               :outline "none"
+                               :fontWeight "bold"
+                               :padding "0"
+                               :opacity (if disable? "0.5" "1.0")}}
+              (if (om/get-state owner :editing?) "Save" "Edit")))
+
+(defn enter-key? [e]
+  (= 13 (.-keyCode e)))
+
+(defn escape-key? [e]
+  (= 27 (.-keyCode e)))
+
+(defn- editor [owner {:keys [value save-editor cancel-editor error-message]}]
+  (dom/div #js {:style #js {:display "inline"}}
+           (dom/textarea #js {:className "editor"
+                              :ref "editor"
+                              :style #js {:display "inline-block"}
+                              :value value
+                              :onKeyPress (fn [e]
+                                            (when (enter-key? e)
+                                              (.preventDefault e)))
+                              :onKeyUp (fn [e]
+                                         (cond
+                                           (enter-key? e) (save-editor)
+                                           (escape-key? e) (cancel-editor)))
+                              :onChange (fn [e] (om/set-state! owner :edited-data (.. e -target -value)))
+                              :onBlur save-editor})
+           (when error-message
+             (dom/span #js {:className "error" :style #js {:vertical-align "top"}}
+                       error-message))))
+
 ;; ---------------------------------------------------------------------
 ;; Main component
 
@@ -130,21 +175,46 @@
   (reify
     om/IInitState
     (init-state [_]
-      {:vacant? (empty? data)
+      {:edited-data (pr-str data)
+       :editing? (boolean (:editing? opts))
+       :open-editor (fn [] (om/update-state! owner (fn [s] (merge s {:editing-error-message nil :editing? true :edited-data (pr-str @data)}))))
+       :save-editor (fn []
+                      (try
+                        (let [new-data (reader/read-string (om/get-state owner :edited-data))]
+                          ;; if the new data is the same as the old just stop editing
+                          ;; if not, set data to new data, which will cause this component to re-mount
+                          ;; this is a little funky but seems necessary to avoid trying to update an unmounted component
+                          (if (= new-data @data)
+                            (om/set-state! owner :editing? false)
+                            (om/update! data new-data)))
+                        (catch js/Error e
+                          (om/set-state! owner :editing-error-message (.-message e)))))
+       :cancel-editor (fn [] (om/set-state! owner :editing? false))
+       :vacant? (empty? data)
        :open? (and (not (false? (:open? opts)))
                    (not (empty? data)))})
 
     om/IRenderState
-    (render-state [_ {:keys [open? vacant?]}]
-      (dom/div #js {:className class}
+    (render-state [_ {:keys [open? vacant? editing? edited-data editing-error-message open-editor save-editor cancel-editor]}]
+      (dom/div #js {:className class
+                    :onDoubleClick (fn [e]
+                                     (.stopPropagation e)
+                                     (open-editor))}
         (toggle-button owner {:disable? vacant?})
-        
+
+        (when open?
+         (edit-button owner {:open-editor open-editor :save-editor save-editor}))
+
+        (when (and open? editing?)
+          (editor owner {:value edited-data :error-message editing-error-message
+                         :save-editor save-editor :cancel-editor cancel-editor}))
+
         (dom/span #js {:className "opener"
-                       :style #js {:display "inline-block"}}
+                       :style #js {:display (if (and open? editing?) "none" "inline-block")}}
           opener)
 
         (dom/ul #js {:className "values"
-                     :style #js {:display (if open? "block" "none")
+                     :style #js {:display (if (and open? (not editing?)) "block" "none")
                                  :listStyleType "none"
                                  :margin "0"}}
           (coll->dom data))
@@ -157,9 +227,16 @@
 
         (dom/span #js {:className "closer"
                        :style #js {:display (if open?
-                                              "block"
+                                              (if editing?
+                                                "none"
+                                                "block")
                                               "inline-block")}}
-          closer)))))
+          closer)))
+
+    om/IDidUpdate
+    (did-update [this prev-props prev-state]
+      (when (om/get-state owner :editing?)
+        (.focus (om/get-node owner "editor"))))))
 
 (defn inspector
   ([data owner]
@@ -233,8 +310,11 @@
   js/RegExp
   (-inspect [this] (literal "regexp" this))
 
+  js/Date
+  (-inspect [this] (literal "date" this))
+
   function
-  (-inspect [this] (literal "function" this)) 
+  (-inspect [this] (literal "function" this))
 
   number
   (-inspect [this] (literal "number" this))

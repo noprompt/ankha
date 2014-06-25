@@ -7,6 +7,7 @@
   :dependencies
   [[org.clojure/clojure "1.5.1"]
    [org.clojure/clojurescript "0.0-2227" :scope "provided"]
+   [org.clojure/tools.reader "0.8.1"]
    [om "0.6.2" :scope "provided"]]
 
   :source-paths ["src"]

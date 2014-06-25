@@ -30,6 +30,10 @@
     color: goldenrod;
 }
 
+.date {
+    color: darkcyan;
+}
+
 .nil {
     color: silver;
 }
@@ -42,6 +46,15 @@
     color: darkgreen;
 }
 
+.error {
+    color: red;
+}
+
 .object .key:after {
     content: ":";
+}
+
+textarea {
+    font-family: monospace;
+    font-size: 13px;
 }

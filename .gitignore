@@ -8,3 +8,8 @@ pom.xml.asc
 /.lein-*
 /.nrepl-port
 .repl*
+resources/public/js/out
+resources/public/js/ankha.js
+examples/a/out
+examples/a/ankha.js
+examples/a/ankha.js.map
