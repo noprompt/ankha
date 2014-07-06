@@ -1,9 +1,12 @@
-(ns example 
+(ns example
   (:require [ankha.core :as ankha]
             [om.core :as om :include-macros true]
-            [om.dom :as dom :include-macros true]))
+            [om.dom :as dom :include-macros true]
+            [cljs.reader :as reader]))
 
 (defrecord Person [first-name last-name])
+
+(reader/register-tag-parser! "example.Person" map->Person)
 
 (js/document.body.appendChild
  (doto (js/document.createElement "div")
