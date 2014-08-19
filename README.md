@@ -14,13 +14,13 @@ A generic data inspection component.
 Add `ankha` as a dependency to your `project.clj` file:
 
 ```clojure
-[ankha "0.1.3"]
+[ankha "0.1.4"]
 ```
 
 For the current development version use:
 
 ```clojure
-[ankha "0.1.4-SNAPSHOT"]
+[ankha "0.1.5-SNAPSHOT"]
 ```
 
 Require `ankha.core` somewhere in your project.
