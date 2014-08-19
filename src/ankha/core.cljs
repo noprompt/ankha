@@ -297,6 +297,9 @@
   Range
   (-inspect [this] (coll-view this "(" ")" "seq range"))
 
+  UUID
+  (-inspect [this] (literal "uuid" this))
+
   om/IndexedCursor
   (-inspect [this]
     (coll-view this "[" "]" "vector indexed-cursor"))
