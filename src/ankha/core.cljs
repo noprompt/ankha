@@ -89,12 +89,65 @@
                                      :verticalAlign "top"}}
             (inspect v)))))))
 
-(defn sequential->dom [data]
-  (into-array
-    (for [[i x :as pair] (map-indexed vector data)]
-      (dom/li #js {:className "entry"
-                   :key (hash-key pair)}
-        (inspect x)))))
+(defn sequential->dom [data owner {:keys [page-item-count]
+                                   :or {page-item-count 10}}]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:page 0})
+    om/IRenderState
+    (render-state [_ {:keys [page]}]
+      (let [button-style {:display "inline-block"
+                          :verticalAlign "top"
+                          :border "none"
+                          :background "none"
+                          :cursor "pointer"
+                          :outline "none"
+                          :fontWeight "bold"
+                          :padding "0"}]
+        (dom/div
+         nil
+         (dom/button
+          #js {:onClick
+               (fn [_]
+                 (om/update-state!
+                  owner :page
+                  (fn [page-number]
+                    (if-not (zero? page-number)
+                      (dec page-number)
+                      page-number))))
+               :style (clj->js
+                       (assoc button-style
+                         :opacity (if (zero? page) "0.3" "1.0")))}
+          "<<")
+         (dom/span nil page)
+         (let [last-page? (fn [p cnt] (> (inc (* (inc p) page-item-count))
+                                         cnt))]
+           (dom/button
+            #js {:onClick
+                 (fn [_]
+                   (om/update-state!
+                    owner :page
+                    (fn [page-number]
+                      (if-not (last-page? page-number (count @data))
+                        (inc page-number)
+                        page-number))))
+                 :style (clj->js
+                         (assoc button-style
+                           :opacity (if (last-page? page (count data))
+                                      "0.3"
+                                      "1.0")))}
+            ">>"))
+         (dom/span nil (str "(" (count data) ")"))
+
+         (let [page-data (->> data
+                              (drop (* page page-item-count))
+                              (take page-item-count))]
+           (into-array
+            (for [[i x :as pair] (map-indexed vector page-data)]
+              (dom/li #js {:className "entry"
+                           :key (hash-key pair)}
+                      (inspect x))))))))))
 
 (defn coll->dom [data]
   (cond
@@ -111,7 +164,7 @@
                           :key-class "object-key"
                           :val-class "object-val"}))
    :else
-   (sequential->dom data)))
+   (om/build sequential->dom data)))
 
 (defn- toggle-button [owner {:keys [disable?]}]
   (dom/button #js {:className "toggle-button"
@@ -203,10 +256,7 @@
 
     om/IRenderState
     (render-state [_ {:keys [open? vacant? editing? edited-data editing-error-message open-editor save-editor cancel-editor]}]
-      (dom/div #js {:className class
-                    :onDoubleClick (fn [e]
-                                     (.stopPropagation e)
-                                     (open-editor))}
+      (dom/div #js {:className class}
         (toggle-button owner {:disable? vacant?})
 
         (when open?
