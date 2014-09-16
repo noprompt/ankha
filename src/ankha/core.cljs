@@ -5,7 +5,9 @@
    [om.dom :as dom :include-macros true]
    [clojure.string :as string]
    [cljs.reader :as reader]
-   [goog.object :as object]))
+   [goog.object :as object]
+   [goog.crypt :as crypt]
+   goog.crypt.Md5))
 
 (enable-console-print!)
 
@@ -42,6 +44,11 @@
   [r]
   (str (record-name r) "{"))
 
+(defn hash-key [data]
+  (let [d (goog.crypt.Md5.)]
+    (.update d (crypt/stringToByteArray (str data)))
+    (crypt/byteArrayToHex (.digest d))))
+
 ;; ---------------------------------------------------------------------
 ;; View helpers
 
@@ -68,7 +75,7 @@
   [data {:keys [entry-class key-class val-class]}]
   (into-array
     (for [[k v] data]
-      (dom/li #js {:key (str [k v])}
+      (dom/li #js {:key (hash-key [k v])}
         (dom/div #js {:className (str "entry " entry-class)
                       :style #js {:position "relative"}}
           (dom/span #js {:className (str "key " key-class)
@@ -86,7 +93,7 @@
   (into-array
     (for [[i x :as pair] (map-indexed vector data)]
       (dom/li #js {:className "entry"
-                   :key (str pair)}
+                   :key (hash-key pair)}
         (inspect x)))))
 
 (defn coll->dom [data]
