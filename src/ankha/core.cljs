@@ -89,12 +89,13 @@
                                      :verticalAlign "top"}}
             (inspect v)))))))
 
-(defn sequential->dom [data owner {:keys [page-item-count]
-                                   :or {page-item-count 10}}]
+(defn sequential->dom
+  [data owner {:keys [page-item-count] :or {page-item-count 10}}]
   (reify
     om/IInitState
     (init-state [_]
-      {:page 0})
+      {:page 1})
+
     om/IRenderState
     (render-state [_ {:keys [page]}]
       (let [button-style {:display "inline-block"
@@ -104,50 +105,42 @@
                           :cursor "pointer"
                           :outline "none"
                           :fontWeight "bold"
-                          :padding "0"}]
-        (dom/div
-         nil
+                          :padding "0 1em"}
+            total (count data)
+            total-pages (js/Math.ceil (/ total page-item-count))
+            first-page? (= page 1)
+            last-page? (= page total-pages)]
+
+        (dom/div nil
          (dom/button
           #js {:onClick
                (fn [_]
-                 (om/update-state!
-                  owner :page
-                  (fn [page-number]
-                    (if-not (zero? page-number)
-                      (dec page-number)
-                      page-number))))
+                 (when-not first-page?
+                   (om/update-state! owner :page dec)))
                :style (clj->js
-                       (assoc button-style
-                         :opacity (if (zero? page) "0.3" "1.0")))}
-          "<<")
-         (dom/span nil page)
-         (let [last-page? (fn [p cnt] (> (inc (* (inc p) page-item-count))
-                                         cnt))]
-           (dom/button
-            #js {:onClick
-                 (fn [_]
-                   (om/update-state!
-                    owner :page
-                    (fn [page-number]
-                      (if-not (last-page? page-number (count @data))
-                        (inc page-number)
-                        page-number))))
-                 :style (clj->js
-                         (assoc button-style
-                           :opacity (if (last-page? page (count data))
-                                      "0.3"
-                                      "1.0")))}
-            ">>"))
-         (dom/span nil (str "(" (count data) ")"))
+                       (assoc button-style :opacity (if first-page? "0.3" "1.0")))}
+          "Prev")
+
+         (dom/span nil (str "Page " page " of " total-pages " (" total " items)"))
+
+         (dom/button
+           #js {:onClick
+                (fn [_]
+                  (when-not last-page?
+                    (om/update-state! owner :page inc)))
+                :style (clj->js
+                        (assoc button-style :opacity (if last-page? "0.3" "1.0")))}
+           "Next")
 
          (let [page-data (->> data
-                              (drop (* page page-item-count))
+                              (drop (* (dec page) page-item-count))
                               (take page-item-count))]
            (into-array
             (for [[i x :as pair] (map-indexed vector page-data)]
               (dom/li #js {:className "entry"
                            :key (hash-key pair)}
                       (inspect x))))))))))
+
 
 (defn coll->dom [data]
   (cond
