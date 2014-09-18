@@ -1,4 +1,21 @@
-(defproject ankha "0.1.5-SNAPSHOT"
+(require '[clojure.java.shell])
+
+(defn project-version
+  "Return the current version string."
+  [base-version {release? :release?}]
+  (if-not (true? release?)
+    (let [last-commit (-> (clojure.java.shell/sh "git" "rev-parse" "HEAD")
+                          (:out)
+                          (.trim))
+          revision (-> (clojure.java.shell/sh "git" (str "rev-list.." last-commit))
+                       (:out)
+                       (.. trim (split "\\n"))
+                       (count))
+          sha (subs last-commit 0 6)]
+      (str base-version "." revision "-" sha))
+    base-version))
+
+(defproject ankha (project-version "0.1.5" {:release? false})
   :description "A generic data inspection component for use with Om."
   :url "https://github.com/noprompt/ankha"
   :license {:name "Eclipse Public License"
