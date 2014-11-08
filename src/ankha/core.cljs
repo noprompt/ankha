@@ -60,7 +60,7 @@
 
 (defn coll-view [data opener closer class]
   (om/build collection-view data
-    {:opts {:opener opener :closer closer :class class}}))
+    {:opts {:opener opener :closer closer :class class :open? false}}))
 
 (defn inspect [x]
   (cond
