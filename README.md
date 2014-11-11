@@ -17,11 +17,10 @@ Add `ankha` as a dependency to your `project.clj` file:
 [ankha "0.1.4"]
 ```
 
-For the current edge version use:
+For the current development version use:
 
-```clojure
-[ankha "0.1.5.1-8f1268"]
-```
+[![Clojars Project](http://clojars.org/ankha/latest-version.svg)](http://clojars.org/ankha)
+
 
 Require `ankha.core` somewhere in your project.
 
