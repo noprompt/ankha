@@ -263,11 +263,12 @@
                        :style #js {:display (if (and open? editing?) "none" "inline-block")}}
           opener)
 
-        (dom/ul #js {:className "values"
-                     :style #js {:display (if (and open? (not editing?)) "block" "none")
-                                 :listStyleType "none"
-                                 :margin "0"}}
-          (coll->dom data))
+        (when open?
+          (dom/ul #js {:className "values"
+                       :style #js {:display (if (and open? (not editing?)) "block" "none")
+                                   :listStyleType "none"
+                                   :margin "0"}}
+                  (coll->dom data)))
 
         (dom/span #js {:className "ellipsis"
                        :style #js {:display (if (or open? vacant?)
