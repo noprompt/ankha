@@ -159,6 +159,9 @@
    :else
    (om/build sequential->dom data)))
 
+(defn atom->dom [atm]
+  (dom/span  #js{:className "atom"} "<Atom " (inspect @atm) " >"))
+
 (defn- toggle-button [owner {:keys [disable?]}]
   (dom/button #js {:className "toggle-button"
                    :disabled disable?
@@ -366,6 +369,9 @@
 
   js/Date
   (-inspect [this] (literal "date" this))
+
+  Atom
+  (-inspect [this] (atom->dom this))
 
   function
   (-inspect [this] (literal "function" this))
