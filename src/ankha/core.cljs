@@ -4,10 +4,11 @@
    [om.core :as om :include-macros true]
    [om.dom :as dom :include-macros true]
    [clojure.string :as string]
+   [clojure.walk :as walk]
    [cljs.reader :as reader]
    [goog.object :as object]
    [goog.crypt :as crypt]
-   goog.crypt.Md5))
+  goog.crypt.Md5))
 
 (enable-console-print!)
 
@@ -17,6 +18,32 @@
 (defprotocol IInspect
   (-inspect [this]
     "Return a React or Om compatible representation of this."))
+
+(defprotocol IEditable
+  (-edit [this value]))
+
+(defn editable? [obj]
+  (satisfies? IEditable obj))
+
+(defn edit [obj value]
+  (if (editable? obj)
+    (-edit obj value)
+    value))
+
+;; ---------------------------------------------------------------------
+;; Edn reader setup
+
+(def atom-reader-tag "cljs/Atom")
+
+(defn atom-reader [val]
+  (atom val))
+
+(cljs.reader/register-tag-parser! atom-reader-tag atom-reader)
+
+(extend-type Atom
+  IPrintWithWriter
+  (-pr-writer [this writer _]
+    (-write writer (str "#" atom-reader-tag " " @this))))
 
 ;; ---------------------------------------------------------------------
 ;; Utilities
@@ -52,15 +79,18 @@
 ;; ---------------------------------------------------------------------
 ;; View helpers
 
-(declare collection-view)
+(declare collection-view editable-collection-view)
 
 (defn literal [class x]
   (dom/span #js {:className class :key x}
     (pr-str x)))
 
 (defn coll-view [data opener closer class]
-  (om/build collection-view data
-    {:opts {:opener opener :closer closer :class class :open? false}}))
+  (let [opts {:opts {:opener opener :closer closer
+                     :class class :open? false}}]
+    (if (editable? data)
+      (om/build editable-collection-view data opts)
+      (om/build collection-view data opts))))
 
 (defn inspect [x]
   (cond
@@ -196,7 +226,7 @@
                                :fontWeight "bold"
                                :padding "0"
                                :opacity (if disable? "0.5" "1.0")}}
-              (if (om/get-state owner :editing?) "Save" "Edit")))
+              (if (om/get-state owner :editing?) "Save " "Edit ")))
 
 (defn enter-key? [e]
   (= 13 (.-keyCode e)))
@@ -217,58 +247,80 @@
                                          (cond
                                            (enter-key? e) (save-editor)
                                            (escape-key? e) (cancel-editor)))
-                              :onChange (fn [e] (om/set-state! owner :edited-data (.. e -target -value)))
-                              :onBlur save-editor})
+                              :onChange (fn [e]
+                                          (om/set-state!
+                                           owner
+                                           :edited-data (.. e -target -value)))})
            (when error-message
              (dom/span #js {:className "error" :style #js {:vertical-align "top"}}
                        error-message))))
 
 ;; ---------------------------------------------------------------------
-;; Main component
+;; Main component logic
 
-(defn collection-view
+(defn- open-editor-fn [data owner]
+  (fn []
+    (om/update-state! owner
+                      (fn [s]
+                        (merge s {:editing-error-message nil
+                                  :editing? true
+                                  :edited-data (pr-str @data)})))))
+
+(defn- save-editor-fn [data owner]
+  (fn []
+    (try
+      (let [edit-str (om/get-state owner :edited-data)
+            new-data (reader/read-string edit-str )]
+        (if (= new-data @data)
+          (om/set-state! owner :editing? false)
+          (do
+            (om/set-state! owner :editing? false)
+            (edit data new-data))))
+      (catch js/Error e
+        (om/set-state! owner :editing-error-message (.-message e))))))
+
+
+(defn editable-collection-view
   [data owner {:keys [class opener closer] :as opts}]
   (reify
     om/IInitState
     (init-state [_]
       {:edited-data (pr-str data)
        :editing? (boolean (:editing? opts))
-       :open-editor (fn [] (om/update-state! owner (fn [s] (merge s {:editing-error-message nil :editing? true :edited-data (pr-str @data)}))))
-       :save-editor (fn []
-                      (try
-                        (let [new-data (reader/read-string (om/get-state owner :edited-data))]
-                          ;; if the new data is the same as the old just stop editing
-                          ;; if not, set data to new data, which will cause this component to re-mount
-                          ;; this is a little funky but seems necessary to avoid trying to update an unmounted component
-                          (if (= new-data @data)
-                            (om/set-state! owner :editing? false)
-                            (om/update! data new-data)))
-                        (catch js/Error e
-                          (om/set-state! owner :editing-error-message (.-message e)))))
+       :open-editor (open-editor-fn data owner)
+       :save-editor (save-editor-fn data owner)
        :cancel-editor (fn [] (om/set-state! owner :editing? false))
        :vacant? (empty? data)
        :open? (and (not (false? (:open? opts)))
                    (not (empty? data)))})
 
     om/IRenderState
-    (render-state [_ {:keys [open? vacant? editing? edited-data editing-error-message open-editor save-editor cancel-editor]}]
+    (render-state [_ {:keys [open? vacant? editing? edited-data
+                             editing-error-message open-editor
+                             save-editor cancel-editor]}]
       (dom/div #js {:className class}
         (toggle-button owner {:disable? vacant?})
 
         (when open?
-         (edit-button owner {:open-editor open-editor :save-editor save-editor}))
+          (edit-button owner {:open-editor open-editor
+                              :save-editor save-editor}))
 
         (when (and open? editing?)
-          (editor owner {:value edited-data :error-message editing-error-message
-                         :save-editor save-editor :cancel-editor cancel-editor}))
+          (editor owner {:value edited-data
+                         :error-message editing-error-message
+                         :save-editor save-editor
+                         :cancel-editor cancel-editor}))
 
         (dom/span #js {:className "opener"
-                       :style #js {:display (if (and open? editing?) "none" "inline-block")}}
+                       :style #js {:display (when (and open? editing?)
+                                              "inline-block")}}
           opener)
 
         (when open?
           (dom/ul #js {:className "values"
-                       :style #js {:display (if (and open? (not editing?)) "block" "none")
+                       :style #js {:display (if (and open? (not editing?))
+                                              "block"
+                                              "none")
                                    :listStyleType "none"
                                    :margin "0"}}
                   (coll->dom data)))
@@ -291,6 +343,47 @@
     (did-update [this prev-props prev-state]
       (when (om/get-state owner :editing?)
         (.focus (om/get-node owner "editor"))))))
+
+
+(defn collection-view
+  [data owner {:keys [class opener closer] :as opts}]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:vacant? (empty? data)
+       :open? (and (not (false? (:open? opts)))
+                   (not (empty? data)))})
+
+    om/IRenderState
+    (render-state [_ {:keys [open? vacant? ]}]
+      (dom/div #js {:className class}
+        (toggle-button owner {:disable? vacant?})
+
+        (dom/span #js {:className "opener"
+                       :style #js {:display (when open? "inline-block")}}
+          opener)
+
+        (when open?
+          (dom/ul #js {:className "values"
+                       :style #js {:display (if open?
+                                              "block"
+                                              "none")
+                                   :listStyleType "none"
+                                   :margin "0"}}
+                  (coll->dom data)))
+
+        (dom/span #js {:className "ellipsis"
+                       :style #js {:display (if open?
+                                              "none"
+                                              "inline")}}
+          "…")
+
+        (dom/span #js {:className "closer"
+                       :style #js {:display (if open?
+                                              "block"
+                                              "inline-block")}}
+          closer)))))
+
 
 (defn inspector
   ([data owner]
@@ -393,3 +486,13 @@
 
   nil
   (-inspect [this] (literal "nil" this)))
+
+
+(extend-protocol IEditable
+  om/MapCursor
+  (-edit [this new-data]
+    (om/update! this new-data))
+
+  om/IndexedCursor
+  (-edit [this new-data]
+    (om/update! this new-data)))
