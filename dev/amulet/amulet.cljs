@@ -18,7 +18,8 @@
 (om/root
  ankha/inspector
  {:origin {:x 0 :y 0}
-  :a (atom {:a 1})
+  :a [1 2 3]
+  :a1 (atom {:a 1})
   :b (atom 1)
   :c #js {:a 1}}
  {:target (js/document.getElementById "ankha")})

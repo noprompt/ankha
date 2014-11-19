@@ -81,12 +81,20 @@
 
 (declare collection-view editable-collection-view)
 
+(defn get-key [data]
+  (if (satisfies? om/ICursor data)
+    (pr-str (om/path data))
+    nil))
+
+
 (defn literal [class x]
   (dom/span #js {:className class :key x}
     (pr-str x)))
 
 (defn coll-view [data opener closer class]
-  (let [opts {:opts {:opener opener :closer closer
+  (let [key (get-key data)
+        opts {:react-key key
+              :opts {:opener opener :closer closer
                      :class class :open? false}}]
     (if (editable? data)
       (om/build editable-collection-view data opts)
@@ -105,7 +113,7 @@
   [data {:keys [entry-class key-class val-class]}]
   (into-array
     (for [[k v] data]
-      (dom/li #js {:key (hash-key [k v])}
+      (dom/li #js {:key (str k)}
         (dom/div #js {:className (str "entry " entry-class)
                       :style #js {:position "relative"}}
           (dom/span #js {:className (str "key " key-class)
@@ -168,7 +176,7 @@
            (into-array
             (for [[i x :as pair] (map-indexed vector page-data)]
               (dom/li #js {:className "entry"
-                           :key (hash-key pair)}
+                           :key (str i)}
                       (inspect x))))))))))
 
 
@@ -271,11 +279,10 @@
     (try
       (let [edit-str (om/get-state owner :edited-data)
             new-data (reader/read-string edit-str )]
-        (if (= new-data @data)
-          (om/set-state! owner :editing? false)
-          (do
-            (om/set-state! owner :editing? false)
-            (edit data new-data))))
+        (om/set-state! owner :editing? false)
+        (if-not (= new-data @data)
+          ;;forcing a remount updating the data
+          (edit data new-data)))
       (catch js/Error e
         (om/set-state! owner :editing-error-message (.-message e))))))
 
@@ -294,6 +301,7 @@
        :open? (and (not (false? (:open? opts)))
                    (not (empty? data)))})
 
+
     om/IRenderState
     (render-state [_ {:keys [open? vacant? editing? edited-data
                              editing-error-message open-editor
@@ -303,7 +311,7 @@
 
         (when open?
           (edit-button owner {:open-editor open-editor
-                              :save-editor save-editor}))
+                              :save-editor (save-editor-fn data owner)}))
 
         (when (and open? editing?)
           (editor owner {:value edited-data
