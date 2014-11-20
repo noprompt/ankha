@@ -13,9 +13,13 @@
   ;; :websocket-url "ws:localhost:3449/figwheel-ws" default
   :jsload-callback
   (fn []
-    (js/console.log (str (gensym "R"))))) 
+    (js/console.log (str (gensym "R")))))
 
 (om/root
  ankha/inspector
- {:origin {:x 0 :y 0}}
+ {:origin {:x 0 :y 0}
+  :a [1 2 3]
+  :a1 (atom {:a 1})
+  :b (atom 1)
+  :c #js {:a 1}}
  {:target (js/document.getElementById "ankha")})
