@@ -53,7 +53,10 @@
   [x]
   (if (object? x)
     (object/isEmpty x)
-    (clojure.core/empty? x)))
+    (try 
+      (clojure.core/empty? x)
+      (catch js/Error _
+        true))))
 
 (defn- record?
   "Return true if x satisfies IRecord, false otherwise."
