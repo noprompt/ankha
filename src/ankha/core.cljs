@@ -76,6 +76,12 @@
     (.update d (crypt/stringToByteArray (str data)))
     (crypt/byteArrayToHex (.digest d))))
 
+(defn map-sorter [m]
+  (into (sorted-map) m))
+
+(defn set-sorter [s]
+  (apply sorted-set s))
+
 ;; ---------------------------------------------------------------------
 ;; View helpers
 
@@ -91,14 +97,17 @@
   (dom/span #js {:className class :key x}
     (pr-str x)))
 
-(defn coll-view [data opener closer class]
-  (let [key (get-key data)
-        opts {:react-key key
-              :opts {:opener opener :closer closer
-                     :class class :open? false}}]
-    (if (editable? data)
-      (om/build editable-collection-view data opts)
-      (om/build collection-view data opts))))
+(defn coll-view
+  ([data opener closer class]
+   (coll-view data opener closer class identity))
+  ([data opener closer class sorter]
+   (let [key (get-key data)
+         opts {:react-key key
+               :opts {:opener opener :closer closer :sorter sorter
+                      :class class :open? false}}]
+     (if (editable? data)
+       (om/build editable-collection-view data opts)
+       (om/build collection-view data opts)))))
 
 (defn inspect [x]
   (cond
@@ -264,6 +273,7 @@
                        error-message))))
 
 ;; ---------------------------------------------------------------------
+
 ;; Main component logic
 
 (defn- open-editor-fn [data owner]
@@ -288,7 +298,7 @@
 
 
 (defn editable-collection-view
-  [data owner {:keys [class opener closer] :as opts}]
+  [data owner {:keys [class opener closer sorter] :as opts}]
   (reify
     om/IInitState
     (init-state [_]
@@ -331,7 +341,7 @@
                                               "none")
                                    :listStyleType "none"
                                    :margin "0"}}
-                  (coll->dom data)))
+                  (coll->dom (sorter data))))
 
         (dom/span #js {:className "ellipsis"
                        :style #js {:display (if (or open? vacant?)
@@ -354,7 +364,7 @@
 
 
 (defn collection-view
-  [data owner {:keys [class opener closer] :as opts}]
+  [data owner {:keys [class opener closer sorter] :as opts}]
   (reify
     om/IInitState
     (init-state [_]
@@ -378,7 +388,7 @@
                                               "none")
                                    :listStyleType "none"
                                    :margin "0"}}
-                  (coll->dom data)))
+                  (coll->dom (sorter data))))
 
         (dom/span #js {:className "ellipsis"
                        :style #js {:display (if open?
@@ -419,20 +429,20 @@
 
   PersistentArrayMap
   (-inspect [this]
-    (coll-view this "{" "}" "map persistent-array-map"))
+    (coll-view this "{" "}" "map persistent-array-map" map-sorter))
 
   PersistentHashMap
   (-inspect [this]
-    (coll-view this "{" "}" "map persistent-hash-map"))
+    (coll-view this "{" "}" "map persistent-hash-map" map-sorter))
 
   PersistentVector
   (-inspect [this] (coll-view this "[" "]" "vector"))
 
   PersistentHashSet
-  (-inspect [this] (coll-view this "#{" "}" "set persistent-hash-set"))
+  (-inspect [this] (coll-view this "#{" "}" "set persistent-hash-set" set-sorter))
 
   PersistentTreeSet
-  (-inspect [this] (coll-view this "#{" "}" "set persistent-tree-set"))
+  (-inspect [this] (coll-view this "#{" "}" "set persistent-tree-set" set-sorter))
 
   List
   (-inspect [this] (coll-view this "(" ")" "list"))
@@ -462,8 +472,8 @@
   om/MapCursor
   (-inspect [this]
     (if (record? (om/value this))
-      (coll-view this (record-opener this) "}" "record map-cursor")
-      (coll-view this "{" "}" "map map-cursor")))
+      (coll-view this (record-opener this) "}" "record map-cursor" map-sorter)
+      (coll-view this "{" "}" "map map-cursor" map-sorter)))
 
   js/RegExp
   (-inspect [this] (literal "regexp" this))
@@ -490,7 +500,7 @@
   (-inspect [this] (coll-view this "#js [" "]" "array"))
 
   object
-  (-inspect [this] (coll-view this "#js {" "}" "object"))
+  (-inspect [this] (coll-view this "#js {" "}" "object" (comp map-sorter js->clj)))
 
   nil
   (-inspect [this] (literal "nil" this)))
