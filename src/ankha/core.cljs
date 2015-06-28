@@ -10,8 +10,6 @@
    [goog.crypt :as crypt]
   goog.crypt.Md5))
 
-(enable-console-print!)
-
 ;; ---------------------------------------------------------------------
 ;; Protocols
 
@@ -54,11 +52,6 @@
   (if (object? x)
     (object/isEmpty x)
     (clojure.core/empty? x)))
-
-(defn- record?
-  "Return true if x satisfies IRecord, false otherwise."
-  [x]
-  (satisfies? IRecord x))
 
 (defn record-name
   "Return the name of a Record type."
@@ -471,7 +464,7 @@
 
   om/MapCursor
   (-inspect [this]
-    (if (record? (om/value this))
+    (if (satisfies? IRecord (om/value this))
       (coll-view this (record-opener this) "}" "record map-cursor" map-sorter)
       (coll-view this "{" "}" "map map-cursor" map-sorter)))
 
