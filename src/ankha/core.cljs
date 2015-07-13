@@ -51,7 +51,10 @@
   [x]
   (if (object? x)
     (object/isEmpty x)
-    (clojure.core/empty? x)))
+    (try 
+      (clojure.core/empty? x)
+      (catch js/Error _
+        true))))
 
 (defn record-name
   "Return the name of a Record type."
